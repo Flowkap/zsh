@@ -1,27 +1,22 @@
-# Requirements:
-# oh-my-zsh
-# powerline shell
-# helm3 + kubectl
+export NVM_DIR="$HOME/.nvm"
+  [ -s "/usr/local/opt/nvm/nvm.sh" ] && . "/usr/local/opt/nvm/nvm.sh"  # This loads nvm
+  [ -s "/usr/local/opt/nvm/etc/bash_completion.d/nvm" ] && . "/usr/local/opt/nvm/etc/bash_completion.d/nvm"  # This loads nvm bash_completion
+
+###############################################################################
+# PATH etc.
+###############################################################################
+
+# JAVA
+export JAVA_HOME="$(/usr/libexec/java_home -v 1.8)"
+export PATH=/Users/fkappes/Library/Python/2.7/bin:~/.local/bin:$PATH
 
 ###############################################################################
 # functions
 ###############################################################################
 
-function powerline_precmd() {
-    PS1="$(powerline-shell --shell zsh $?)"
-}
-
-function install_powerline_precmd() {
-    for s in "${precmd_functions[@]}"; do
-        if [ "$s" = "powerline_precmd" ]; then
-        return
-        fi
-    done
-    precmd_functions+=(powerline_precmd)
-}
-
-function all_images() {
-    kubectl get pods -o jsonpath="{..image}" |tr -s '[[:space:]]' '\n' |sort |uniq -c
+# https://apple.stackexchange.com/a/346992
+function macnst() {
+    netstat -Watnlv | grep LISTEN | awk '{"ps -o comm= -p " $9 | getline procname;colred="\033[01;31m";colclr="\033[0m"; print colred "proto: " colclr $1 colred " | addr.port: " colclr $4 colred " | pid: " colclr $9 colred " | name: " colclr procname;  }' | column -t -s "|"
 }
 
 function git_recursive() {
@@ -40,7 +35,7 @@ function git_recursive() {
     local d="$1"
     if [ -d "$d" ]; then
         if [ -e "$d/.ignore" ]; then
-        echo -e "\n${HIGHLIGHT}Ignoring $d${NORMAL}"
+            echo -e "\n${HIGHLIGHT}Ignoring $d${NORMAL}"
         else
         cd $d > /dev/null
         if [ -d ".git" ]; then
@@ -48,7 +43,7 @@ function git_recursive() {
             # echo $operation
             git $OPERATION
         else
-            scan *
+            scan * || true
         fi
         cd .. > /dev/null
         fi
@@ -56,56 +51,21 @@ function git_recursive() {
     }
 
     function scan () {
-    for x in $*; do
-        update "$x" operation=$operation
-    done
+        for x in $*; do
+            update "$x" operation=$operation
+        done
     }
 
     echo -e "${HIGHLIGHT}Scanning ${PWD}${NORMAL}"
     scan *
 }
 
-function git_open() {
-    if [ -d ".git" ]; then
-        GIT_URL=$(cat .git/config | grep url)
-        PROJECT_ID="$(cut -d'/' -f4 <<<"$GIT_URL")"
-        REPO="$(cut -d'/' -f5 <<<"$GIT_URL")"
-        REPO=${REPO%".git"}
-        URL="https://git.swarco.com/projects/$PROJECT_ID/repos/$REPO/browse"
-        bash -c "xdg-open $URL" 2> /dev/null  1> /dev/null
-    else
-        echo "This is not a git repo!"
-        exit 1
-    fi
-}
-
-function clone_all() {
-    node ~/bin/cloneAll/cloneAll.js | xargs -L1 git clone
-}
-
-function kc_print_resources() {
-    echo -e "Iterating...\n"
-
-    nodes=$(kubectl get node --no-headers -o custom-columns=NAME:.metadata.name)
-
-    for node in $nodes; do
-    echo "Node: $node"
-    kubectl describe node "$node" | sed '1,/Non-terminated Pods/d'
-    echo
-    done
-}
-
 ###############################################################################
 # custom extensions
 ###############################################################################
 
-# Personal bin dir
-PATH="/home/flowkap/.local/bin:$PATH"
-
-# Powerline shell
-if [ "$TERM" != "linux" ]; then
-    install_powerline_precmd
-fi
+# Dock Settings
+# defaults write com.apple.Dock autohide-delay -float 0; defaults write com.apple.dock autohide-time-modifier -float 0.5; killall Dock
 
 #History bash_history 10Million
 HISTFILE=~/.zsh_history
@@ -113,8 +73,6 @@ HISTSIZE=10000000
 SAVEHIST=10000000
 
 # Standard stuff
-PROMPT_COMMAND='echo -en "\033]0; $("pwd") \a"'
-
 alias ll='ls -ls'
 alias la='ls -la'
 alias uuid='cat /proc/sys/kernel/random/uuid'
@@ -128,46 +86,27 @@ alias git='hub'
 alias gitr='git_recursive'
 alias push='git push'
 alias pull='git pull'
-git config --global alias.open "!zsh -c 'source ~/.flowkap && (git_open &)'"
+git config --global alias.open '!f() { open $(cat .git/config | grep url | sed -r "s/.+url =//g" | sed -r "s/git@(.*):/http:\/\/\1\//g"); }; f'
+git config --global alias.co 'checkout'
 
 # FUN
 alias csn='echo H4sIAG9GYVsAA51Yba7sIAj9P6swMRJiDGzB/a/qAmprp0o7l+S9O231HMAjfnw+n0/4txEDQAKUX/KE5X9QBWq3GEJqvyCXnH+Ho1RnC6GjIQXCWn9GvMKpcacQVxWx1t8gb3hmidoHZkgo6ZBs/uTqGlW9bOEzSYpTDKUyAr9Hvod/AUfo8JrpLA/4GtoFNvAuChQnsvkBL8EpAHjI3VpsJeX+8x16KZGqjNILgu5/b0rv8HPNMvop1McQ4Pib3utQswoIRSN/l6Ck0smio1eyiXj4Fh3oUmMMFXMjMKL4LkXEU2oX2TiMITDcgnzBMBHMo3wPJ6ZUSZR/5XhRA7OTmW8OrQWl4pXjkaJ86/PynLIMVBRoS5rUbS3eBZGYSumTPj1x0CoKjCmeky/hMr1AIwVPHGk7zdTlYkMic/FoLk+IHAqryuVffCAovMJOgWowbQm/KVleGN7sWg1Q1YEn0S6ngQyAJOeiWV0BbP2ilkhjlih7ifVZyqpaaF4UIVi6Tdck7rCwxFwUH4qIIGuD3v+BZRWKfjgSQ2hZSg00ckBRBBJw+zwGz6fBBYvh5fjlzoCl/pzb80iGS7PKGAzgcjTjadTH66bro5dfGPc0asTJHLnOlFITK1eWdJYTweOhE/0igC9LMD/FmZZe8eSFnuN3o1j1f84T9BzcMagu0bm+bQPK9qIkqcQBOWphmZhOT13BrWrMFxEPUBJvuujCmckpEx7RStdwbVKXHYfRO6K43DpcFHYbsauNlAgQefVtxVMvZVJNaz2dTzDpZYqokjOPNkS2lEw2pi0mKIY+XswZCfsVekdzCeBCGCFRmV5cFkXYCtzf3H1xnQTTgnoVU9oxuTxqGNaRbRE22XuzIXaZ7s3Xax7uc3fxoazZaNlzyfQiouHp4CIav3b5WDFBrsXbLd+s7bJla1ho7+VGET9sPk9rlXX3cafyn6mym7rqlb1faKAvTKuCPGxf9n7ZvR++peVOU83ZaD/Bh1M0UiKwL0y79DkHk4fJq6vhsWrTYy+HaD37DuvYGlY81tl9tfQWQZdnrLpYxSM6Q9o75q3rHhOOJhq7BFae8uDuIDzpWRCyJTYmxW9dtrp72B47TJY52bYi1wx2iCwPPfzTixsUVQkaEZj0Aksqnq9V//Tt9YQWRdTwOGVW2flTHe83p/ZaTp/QRpi1wqQ2U1Rz7TAZ+um0nflq7xcA7GUCsMKkj2gjHpfXU/WcirWPQNK/7aqs1bbG1b7EmSvYhDZxot7A2LqVzUm6c51qOnpr42iERkeXuCDsuWqLe2T2powRyyIsOwmFg4qZaeK4U/Xqa2EtLwPUAb1iaP62PMfO1+M+MmjGo1VeRYU9g3bQvl+rR70o1ePToLYfYAKpPURgjgddbeJBe6G5sqvE206vttuQ0F3h7hW3/dBXg9bBPmC/Hs8d5L6F7HElCzWFMdG5jgp6NuiPJrIBbO/SrqTZteJAOBufjtIphTEOTx7XcSetwWnfMUQdWCGjHY8mj1sYYdJANjITaTGhy2B+/gAOXKA2KRkAAA== | base64 -d | gunzip && sleep 5s && clear'
 alias sw='telnet towel.blinkenlights.nl'
 alias shruggie="echo -n '¯\_(ツ)_/¯' | xclip -selection clipboard; xclip -o -selection clipboard; echo -e '\n'"
 
-# Tools
-alias pgadmin='docker run --restart=always --network host -e PGADMIN_DEFAULT_EMAIL=florian.kappes@swarco.de -e PGADMIN_DEFAULT_PASSWORD=YahGhim8 -e PGADMIN_LISTEN_PORT=15432 -v /home/flowkap/pgadmin4/:/var/lib/pgadmin --name pgadmin4 -d dpage/pgadmin4'
-
-# special
-export ANSIBLE_NOCOWS=1
-alias vpn='sudo bash -c "echo 2 > /proc/sys/net/ipv4/tcp_mtu_probing"; sudo barracudavpn'
-alias vpnConnect='sudo bash -c "echo 2 > /proc/sys/net/ipv4/tcp_mtu_probing"; sudo barracudavpn --start -l florian.kappes'
-alias ho='vpnConnect; sudo apt update; sudo apt upgrade -y; cip'
-alias cip='cd ~/git/ && clone_all ; gitr sync'
-
-
 ###############################################################################
 # Kubernetes
 ###############################################################################
 export KUBE_EDITOR="nano"
-
-# Ansible vault
-# helper to edit an vault (like inventory host_vars files)
-alias vault="EDITOR='code --wait' ansible-vault edit --vault-password-file=~/.vault-pass"
 
 # kc because reason
 source <(kubectl completion zsh) programm &> /dev/null
 source <(kubectl completion zsh | sed 's/kubectl/kc/g') &> /dev/null
 alias kc='kubectl'
 
-# Kubebox
-# Log and analysis tool
-alias kubebox='docker run -it --rm -v ~/.kube/:/home/node/.kube/:ro astefanutti/kubebox'
-alias kb="kubebox"
-
 # Kube Operational view
 # Multi cluster UI
-alias kube-ops-view='docker run -it --net=host -v ~/.kube:/kube hjacobs/kube-ops-view --kubeconfig-path=/kube/config'
+alias kube-ops-view='docker run -it -p 8080:8080 -v ~/.kube:/kube hjacobs/kube-ops-view --kubeconfig-path=/kube/config'
 alias ko="kube-ops-view"
 
 # Kubetail
@@ -175,27 +114,38 @@ alias ko="kube-ops-view"
 alias kubetail="kubetail.sh"
 alias kt="kubetail"
 
-# Port forward using kubectl
-# Used to connect to any cluster internal pod or service if not exposed
-# Needed for staging + prod!
-alias port-forward="port-forward.sh"
-alias pf="port-forward"
+###############################################################################
+# Powerlevel10k
+###############################################################################
 
-# Switches cluster context
-# Basically copies named file as default .kube/config
-alias switch-cluster="switch-cluster.sh"
-alias sc="switch-cluster"
+function prompt_my_vpn() {
+    p10k segment -f 31 -t $(if [[ $(ifconfig | grep ppp0 ) ]]; then echo VPN; else echo LOC; fi)
+}
 
-# Changes namespace context
-# For both:
-#   kubectl
-#   helm
-alias switch-namespace="switch-namespace.sh"
-alias sn="switch-namespace"
+# The list of segments shown on the left. Fill it with the most important segments.
+typeset -g POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(
+    # =========================[ Line #1 ]=========================
+    dir                     # current directory
+    vcs                     # git status
+    # =========================[ Line #2 ]=========================
+    newline                 # \n
+    prompt_char             # prompt symbol
+)
 
-# Prints ressource consumption statistics for whole cluster
-alias print-resources="kc_print_resources"
-alias restart-core="restart-core.sh"
+typeset -g POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(
+    # =========================[ Line #1 ]=========================
+    status                  # exit code of the last command
+    time                    # current time
+    my_vpn                  # FortiClient status
+    wifi                    # wifi speed
+    battery                 # internal battery
+    # =========================[ Line #2 ]=========================
+    newline                 # \n
+    kubecontext             # current kubernetes context (https://kubernetes.io/)
+    load                    # CPU load
+    ram                     # free RAM
+    disk_usage              # disk usage
+)
 
-# Get all images running in current namespace
-alias kci="all_images"
+POWERLEVEL9K_KUBECONTEXT_SHOW_ON_COMMAND='kubectl|kc'
+#typeset -g POWERLEVEL9K_TRANSIENT_PROMPT=always
