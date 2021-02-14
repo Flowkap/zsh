@@ -1,7 +1,7 @@
 # Requires powerlevel 10k + oh-my-zsh
 
 ###############################################################################
-# functions
+# PATH etc.
 ###############################################################################
 
 function git_recursive() {
@@ -73,7 +73,7 @@ alias git='hub'
 alias gitr='git_recursive'
 alias push='git push'
 alias pull='git pull'
-git config --global alias.open '!f() { open $(cat .git/config | grep url | sed -r "s/.+url =//g" | sed -r "s/git@(.*):/http:\/\/\1\//g"); }; f'
+git config --global alias.open '!f() { chromium $(cat .git/config | grep url | sed -r "s/.+url =//g" | sed -r "s/git@(.*):/http:\/\/\1\//g"); }; f'
 git config --global alias.co 'checkout'
 
 # FUN
@@ -95,3 +95,34 @@ alias kc='kubectl'
 # Multi cluster UI
 alias kube-ops-view='docker run -it -p 8080:8080 -v ~/.kube:/kube hjacobs/kube-ops-view --kubeconfig-path=/kube/config'
 alias ko="kube-ops-view"
+
+###############################################################################
+# Powerlevel10k
+###############################################################################
+
+# The list of segments shown on the left. Fill it with the most important segments.
+typeset -g POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(
+    # =========================[ Line #1 ]=========================
+    dir                     # current directory
+    vcs                     # git status
+    # =========================[ Line #2 ]=========================
+    newline                 # \n
+    prompt_char             # prompt symbol
+)
+
+typeset -g POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(
+    # =========================[ Line #1 ]=========================
+    status                  # exit code of the last command
+    time                    # current time
+    wifi                    # wifi speed
+    battery                 # internal battery
+    # =========================[ Line #2 ]=========================
+    newline                 # \n
+    kubecontext             # current kubernetes context (https://kubernetes.io/)
+    load                    # CPU load
+    ram                     # free RAM
+    disk_usage              # disk usage
+)
+
+POWERLEVEL9K_KUBECONTEXT_SHOW_ON_COMMAND='kubectl|kc'
+#typeset -g POWERLEVEL9K_TRANSIENT_PROMPT=always
